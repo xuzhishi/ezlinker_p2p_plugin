@@ -5,21 +5,22 @@ MQTT标准协议规定：如果两个客户端之间要通信，必须订阅相�
 ## 2.使用方法
 本插件为EMQX新增一个内置topic：`$p2p`，客户端需要订对点通信的时候，只需要按照以下格式来发送即可：
 ```
-topic:$p2p/{clientId}
+含义：给topic下客户端id为topic的客户端单独发送一条数据
+topic:$p2p/{clientId}/{topic}
 payload:数据内容
 ```
 其中`{clientId}`就是要发送的对端的clientid.如果是python客户端，A客户端给B发送数据，最简单的代码描述应该是这样：
 ```python
-client.publish('$p2p/B', json.dumps({a:1,b:2}, ensure_ascii=False))
+client.publish('$p2p/B/topic1', json.dumps({a:1,b:2}, ensure_ascii=False))
 ```
 > 注意:`{clientId}`为空的时候不发送任何数据，也不会返回任何数据
 
 
-License
+## 3.开源协议
 -------
 
 Apache License Version 2.0
 
-Author
+## 4.作者
 ------
-wwhai
+wwhai，QQ：751957846（email：+@qq.com）
