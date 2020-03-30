@@ -1,0 +1,46 @@
+%%-*- mode: erlang -*-
+
+{mapping, "ezlinker_p2p_plugin.hook.client.connected.$name", "ezlinker_p2p_plugin.hooks", [
+  {datatype, string}
+]}.
+
+{mapping, "ezlinker_p2p_plugin.hook.client.disconnected.$name", "ezlinker_p2p_plugin.hooks", [
+  {datatype, string}
+]}.
+
+{mapping, "ezlinker_p2p_plugin.hook.client.subscribe.$name", "ezlinker_p2p_plugin.hooks", [
+  {datatype, string}
+]}.
+
+{mapping, "ezlinker_p2p_plugin.hook.client.unsubscribe.$name", "ezlinker_p2p_plugin.hooks", [
+  {datatype, string}
+]}.
+
+{mapping, "ezlinker_p2p_plugin.hook.session.subscribed.$name", "ezlinker_p2p_plugin.hooks", [
+  {datatype, string}
+]}.
+
+{mapping, "ezlinker_p2p_plugin.hook.session.unsubscribed.$name", "ezlinker_p2p_plugin.hooks", [
+  {datatype, string}
+]}.
+
+{mapping, "ezlinker_p2p_plugin.hook.message.publish.$name", "ezlinker_p2p_plugin.hooks", [
+  {datatype, string}
+]}.
+
+{mapping, "ezlinker_p2p_plugin.hook.message.acked.$name", "ezlinker_p2p_plugin.hooks", [
+  {datatype, string}
+]}.
+
+{mapping, "ezlinker_p2p_plugin.hook.message.delivered.$name", "ezlinker_p2p_plugin.hooks", [
+  {datatype, string}
+]}.
+
+
+{translation, "ezlinker_p2p_plugin.hooks", fun(Conf) ->
+  Hooks = cuttlefish_variable:filter_by_prefix("ezlinker_p2p_plugin.hook", Conf),
+  lists:map(
+    fun({[_, _, Name1, Name2, _], Val}) ->
+	  {lists:concat([Name1, ".", Name2]), Val}
+	end, Hooks)
+end}.

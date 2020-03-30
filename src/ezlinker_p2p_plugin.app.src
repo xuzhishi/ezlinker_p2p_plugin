@@ -1,0 +1,14 @@
+{application, ezlinker_p2p_plugin,
+ [{description, "EZlinker point to point plugin"},
+  {vsn, "git"},
+  {modules, []},
+  {registered, []},
+  {mod, {ezlinker_p2p_plugin_app, []}},
+  {applications,
+   [kernel,
+    stdlib
+   ]},
+  {env,[]},
+  {licenses, ["Apache 2.0"]},
+  {links, []}
+ ]}.
