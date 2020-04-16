@@ -45,24 +45,29 @@ unload() ->
 %           timestamp :: integer()
 %          }).
 %%--------------------------------------------------------------------
+match_p2p_clientid(P2PTopic) when is_list(P2PTopic), length(P2PTopic) > 5 ->
 
+  case string:prefix(P2PTopic, "$p2p/") of
+    ClientId ->
+      ClientId;
+    nomatch ->
+      nomatch
+  end.
 on_message_publish(Message = #message{topic =  <<"$SYS/", _/binary>>}, _Env) ->
 	{ok, Message};
-	
-on_message_publish(Message = #message{topic = <<"$p2p/", PeerClientId/binary>>, qos = QOS, payload = Payload}, {Filter}) ->
-		with_filter(fun() ->
-		  emqx_metrics:inc('ezlinker_p2p_plugin.message_publish'),
-		  case  ets:lookup(emqx_channel, list_to_binary(PeerClientId)) of
-			[{_, ChannelPid}] ->
-				
-				Message = emqx_message:make(list_to_binary(PeerClientId), QOS,  <<"$p2p/", PeerClientId/binary>>, Payload),
-				ChannelPid ! {deliver, "$p2p", Message};
-			[] ->
-				_,
-		  {ok, Message}
-		end,
-		  Message, <<"$p2p/", PeerClientId/binary>>, Filter).
-	  
+
+on_message_publish(Message = #message{topic =  <<"$p2p/", PeerClientId/binary>>,qos = QOS , payload = Payload }, _Env) ->
+	io:format("P2P Message:~p to ~p QOS is:~p ~n",[ Payload , PeerClientId , QOS ] ),
+	{ok, Message};
+			
+on_message_publish(Message = #message{topic = Topic}, {Filter}) ->
+		with_filter(
+		  fun() ->
+			emqx_metrics:inc('advisory_plugin.message_publish'),
+			%% Begin
+			%% End
+			{ok, Message}
+		  end, Message, Topic, Filter).
 %%--------------------------------------------------------------------
 %% Internal functions
 %%--------------------------------------------------------------------
