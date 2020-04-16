@@ -6,17 +6,8 @@
 
 -export([load/0, register_metrics/0, unload/0]).
 
--export([on_client_connected/4,
-	 on_client_disconnected/4]).
 
--export([on_client_subscribe/4,
-	 on_client_unsubscribe/4]).
-
--export([on_session_subscribed/4,
-	 on_session_unsubscribed/4]).
-
--export([on_message_acked/3, on_message_delivered/3,
-	 on_message_publish/2]).
+-export([on_message_publish/2]).
 
 -define(LOG(Level, Format, Args),
 	emqx_logger:Level("ezlinker_p2p_plugin: " ++ Format,
@@ -25,15 +16,8 @@
 register_metrics() ->
     [emqx_metrics:new(MetricName)
      || MetricName
-	    <- ['ezlinker_p2p_plugin.client_connected',
-		'ezlinker_p2p_plugin.client_disconnected',
-		'ezlinker_p2p_plugin.client_subscribe',
-		'ezlinker_p2p_plugin.client_unsubscribe',
-		'ezlinker_p2p_plugin.session_subscribed',
-		'ezlinker_p2p_plugin.session_unsubscribed',
-		'ezlinker_p2p_plugin.message_publish',
-		'ezlinker_p2p_plugin.message_delivered',
-		'ezlinker_p2p_plugin.message_acked']].
+	    <- [
+		'ezlinker_p2p_plugin.message_publish']].
 
 load() ->
     lists:foreach(fun ({Hook, Fun, Filter}) ->
@@ -47,108 +31,6 @@ unload() ->
 		  end,
 		  parse_rule(application:get_env(?APP, hooks, []))).
 
-%%--------------------------------------------------------------------
-%% Client connected
-%%--------------------------------------------------------------------
-on_client_connected(#{clientid := ClientId,
-		      username := Username},
-		    0, ConnInfo, _Env) ->
-    emqx_metrics:inc('ezlinker_p2p_plugin.client_connected'),
-    %% Code Start
-    %% Here is the code
-    %% End
-    ok;
-on_client_connected(#{}, _ConnAck, _ConnInfo, _Env) ->
-    ok.
-
-%%--------------------------------------------------------------------
-%% Client disconnected
-%%--------------------------------------------------------------------
-on_client_disconnected(#{}, auth_failure, _ConnInfo,
-		       _Env) ->
-    ok;
-on_client_disconnected(Client, {shutdown, Reason},
-		       ConnInfo, Env)
-    when is_atom(Reason) ->
-    on_client_disconnected(Client, Reason, ConnInfo, Env);
-on_client_disconnected(#{clientid := ClientId,
-			 username := Username},
-		       Reason, _ConnInfo, _Env)
-    when is_atom(Reason) ->
-    emqx_metrics:inc('ezlinker_p2p_plugin.client_disconnected'),
-    %% Code Start
-    %% Here is the code
-    %% End
-    ok;
-on_client_disconnected(_, Reason, _ConnInfo, _Env) ->
-    ?LOG(error,
-	 "Client disconnected, cannot encode reason: ~p",
-	 [Reason]),
-    ok.
-
-%%--------------------------------------------------------------------
-%% Client subscribe
-%%--------------------------------------------------------------------
-on_client_subscribe(#{clientid := ClientId,
-		      username := Username},
-		    Properties, RawTopicFilters, {Filter}) ->
-    lists:foreach(fun ({Topic, Opts}) ->
-			  with_filter(fun () ->
-					      emqx_metrics:inc('ezlinker_p2p_plugin.client_subscribe'),
-					      %% Code Start
-					      %% Here is the code
-					      %% End
-					      ok
-				      end,
-				      Topic, Filter)
-		  end,
-		  RawTopicFilters).
-
-%%--------------------------------------------------------------------
-%% Client unsubscribe
-%%--------------------------------------------------------------------
-on_client_unsubscribe(#{clientid := ClientId,
-			username := Username},
-		      Properties, RawTopicFilters, {Filter}) ->
-    lists:foreach(fun ({Topic, Opts}) ->
-			  with_filter(fun () ->
-					      emqx_metrics:inc('ezlinker_p2p_plugin.client_unsubscribe'),
-					      %% Code Start
-					      %% Here is the code
-					      %% End
-					      ok
-				      end,
-				      Topic, Filter)
-		  end,
-		  RawTopicFilters).
-
-%%--------------------------------------------------------------------
-%% Session subscribed
-%%--------------------------------------------------------------------
-on_session_subscribed(#{clientid := ClientId}, Topic,
-		      SubOpts, {Filter}) ->
-    with_filter(fun () ->
-			emqx_metrics:inc('ezlinker_p2p_plugin.session_subscribed'),
-			%% Code Start
-			%% Here is the code
-			%% End
-			ok
-		end,
-		Topic, Filter).
-
-%%--------------------------------------------------------------------
-%% Session unsubscribed
-%%--------------------------------------------------------------------
-on_session_unsubscribed(#{clientid := ClientId}, Topic,
-			Opts, {Filter}) ->
-    with_filter(fun () ->
-			emqx_metrics:inc('ezlinker_p2p_plugin.session_unsubscribed'),
-			%% Code Start
-			%% Here is the code
-			%% End
-			ok
-		end,
-		Topic, Filter).
 
 %%--------------------------------------------------------------------
 %% Message publish
@@ -163,54 +45,24 @@ on_session_unsubscribed(#{clientid := ClientId}, Topic,
 %           timestamp :: integer()
 %          }).
 %%--------------------------------------------------------------------
-on_message_publish(Message = #message{topic =
-					  <<"$SYS/", _/binary>>},
-		   _Env) ->
-    {ok, Message};
-on_message_publish(Message = #message{topic = Topic,
-				      flags = #{retain := Retain}},
-		   {Filter}) ->
-    with_filter(fun () ->
-			emqx_metrics:inc('ezlinker_p2p_plugin.message_publish'),
-			%% Code Start
-			case string:prefix(Topic, "$p2p/") of
-			  nomatch -> ok;
-			  DestId -> io:format("P2P Message to :~p~n", [DestId])
-			end,
-			{ok, Message}
-		end,
-		Message, Topic, Filter).
 
-%%--------------------------------------------------------------------
-%% Message deliver
-%%--------------------------------------------------------------------
-on_message_delivered(#{clientid := ClientId,
-		       username := Username},
-		     Message = #message{topic = Topic, payload = Payload},
-		     {Filter}) ->
-    with_filter(fun () ->
-			emqx_metrics:inc('ezlinker_p2p_plugin.message_delivered'),
-			%% Code Start
-			%% Here is the code
-			%% End
-			ok
+on_message_publish(Message = #message{topic =  <<"$SYS/", _/binary>>}, _Env) ->
+	{ok, Message};
+	
+on_message_publish(Message = #message{topic = <<"$p2p/", PeerClientId/binary>>, qos = QOS, payload = Payload}, {Filter}) ->
+		with_filter(fun() ->
+		  emqx_metrics:inc('ezlinker_p2p_plugin.message_publish'),
+		  case  ets:lookup(emqx_channel, list_to_binary(PeerClientId)) of
+			[{_, ChannelPid}] ->
+				
+				Message = emqx_message:make(list_to_binary(PeerClientId), QOS,  <<"$p2p/", PeerClientId/binary>>, Payload),
+				ChannelPid ! {deliver, "$p2p", Message};
+			[] ->
+				_,
+		  {ok, Message}
 		end,
-		Topic, Filter).
-
-%%--------------------------------------------------------------------
-%% Message acked
-%%--------------------------------------------------------------------
-on_message_acked(#{clientid := ClientId},
-		 Message = #message{topic = Topic}, {Filter}) ->
-    with_filter(fun () ->
-			emqx_metrics:inc('ezlinker_p2p_plugin.message_acked'),
-			%% Code Start
-			%% Here is the code
-			%% End
-			ok
-		end,
-		Topic, Filter).
-
+		  Message, <<"$p2p/", PeerClientId/binary>>, Filter).
+	  
 %%--------------------------------------------------------------------
 %% Internal functions
 %%--------------------------------------------------------------------
@@ -240,26 +92,10 @@ with_filter(Fun, Msg, Topic, Filter) ->
 	
 load_(Hook, Fun, Params) ->
 	case Hook of
-		'client.connected'    -> emqx:hook(Hook, fun ?MODULE:Fun/4, [Params]);
-		'client.disconnected' -> emqx:hook(Hook, fun ?MODULE:Fun/4, [Params]);
-		'client.subscribe'    -> emqx:hook(Hook, fun ?MODULE:Fun/4, [Params]);
-		'client.unsubscribe'  -> emqx:hook(Hook, fun ?MODULE:Fun/4, [Params]);
-		'session.subscribed'  -> emqx:hook(Hook, fun ?MODULE:Fun/4, [Params]);
-		'session.unsubscribed'-> emqx:hook(Hook, fun ?MODULE:Fun/4, [Params]);
-		'message.publish'     -> emqx:hook(Hook, fun ?MODULE:Fun/2, [Params]);
-		'message.acked'       -> emqx:hook(Hook, fun ?MODULE:Fun/3, [Params]);
-		'message.delivered'   -> emqx:hook(Hook, fun ?MODULE:Fun/3, [Params])
+		'message.publish'     -> emqx:hook(Hook, fun ?MODULE:Fun/2, [Params])
 	end.
 
 unload_(Hook, Fun) ->
 	case Hook of
-		'client.connected'    -> emqx:unhook(Hook, fun ?MODULE:Fun/4);
-		'client.disconnected' -> emqx:unhook(Hook, fun ?MODULE:Fun/4);
-		'client.subscribe'    -> emqx:unhook(Hook, fun ?MODULE:Fun/4);
-		'client.unsubscribe'  -> emqx:unhook(Hook, fun ?MODULE:Fun/4);
-		'session.subscribed'  -> emqx:unhook(Hook, fun ?MODULE:Fun/4);
-		'session.unsubscribed'-> emqx:unhook(Hook, fun ?MODULE:Fun/4);
-		'message.publish'     -> emqx:unhook(Hook, fun ?MODULE:Fun/2);
-		'message.acked'       -> emqx:unhook(Hook, fun ?MODULE:Fun/3);
-		'message.delivered'   -> emqx:unhook(Hook, fun ?MODULE:Fun/3)
+		'message.publish'     -> emqx:unhook(Hook, fun ?MODULE:Fun/2)
 	end.
