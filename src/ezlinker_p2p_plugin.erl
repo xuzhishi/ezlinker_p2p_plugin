@@ -45,17 +45,13 @@ unload() ->
 %           timestamp :: integer()
 %          }).
 %%--------------------------------------------------------------------
-match_p2p_clientid(P2PTopic) when is_list(P2PTopic), length(P2PTopic) > 5 ->
 
-  case string:prefix(P2PTopic, "$p2p/") of
-    ClientId ->
-      ClientId;
-    nomatch ->
-      nomatch
-  end.
 on_message_publish(Message = #message{topic =  <<"$SYS/", _/binary>>}, _Env) ->
 	{ok, Message};
-
+%%
+%%  ChannelPid = ets:lookup(emqx_channel, PeerClientId),
+%%  Message = emqx_message:make(<<"$p2p/", FromClientId>>, QOS, PeerClientId , Payload).
+%%  ChannelPid ! {deliver, <<"$p2p/", FromClientId>>, Message}
 on_message_publish(Message = #message{topic =  <<"$p2p/", PeerClientId/binary>>,qos = QOS , payload = Payload }, _Env) ->
 	io:format("P2P Message:~p to ~p QOS is:~p ~n",[ Payload , PeerClientId , QOS ] ),
 	{ok, Message};
@@ -75,7 +71,7 @@ parse_rule(Rules) -> parse_rule(Rules, []).
 
 parse_rule([], Acc) -> lists:reverse(Acc);
 parse_rule([{Rule, Conf} | Rules], Acc) ->
-    Params = jsx:decode(iolist_to_binary(Conf)),
+    Params = emqx_json:decode(iolist_to_binary(Conf)),
     Action = proplists:get_value(<<"action">>, Params),
     Filter = proplists:get_value(<<"topic">>, Params),
     parse_rule(Rules,
