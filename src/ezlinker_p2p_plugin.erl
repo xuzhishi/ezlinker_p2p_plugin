@@ -77,11 +77,11 @@ on_client_subscribe(_C, _P, _RTF, {_F}) ->
         emqx_metrics:inc('ezlinker_p2p_plugin.client_subscribe'),
     %% Code Start
 		io:format("Client sub topic:~p~n",[Topic]),
-		case  string:prefix(Topic,"$p2p/") of
-			nomatch ->
+		case  string_start_with(Topic,"$p2p/") of
+			false ->
 				io:format("Client nomatch p2p topic~n"),
 				ok;
-			_ ->
+			true ->
 				io:format("Client match p2p topic ,deny~n"),
 				{stop, deny}
 		end
@@ -126,4 +126,13 @@ unload_(Hook, Fun) ->
 	case Hook of
 		'message.publish'     -> emqx:unhook(Hook, fun ?MODULE:Fun/2);
 		'client.subscribe' -> emqx:hook(Hook, fun ?MODULE:Fun/4)
+	end.
+
+%% start with
+string_start_with(String,SubString)->
+	case  string:prefix(String,SubString) of
+		nomatch ->
+			false;
+		_ ->
+			true
 	end.
