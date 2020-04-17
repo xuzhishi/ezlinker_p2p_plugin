@@ -8,6 +8,7 @@
 
 
 -export([on_message_publish/2]).
+-export([on_client_subscribe/4]).
 
 -define(LOG(Level, Format, Args),
 	emqx_logger:Level("ezlinker_p2p_plugin: " ++ Format,
@@ -17,7 +18,9 @@ register_metrics() ->
     [emqx_metrics:new(MetricName)
      || MetricName
 	    <- [
-		'ezlinker_p2p_plugin.message_publish']].
+		'ezlinker_p2p_plugin.message_publish',
+		'ezlinker_p2p_plugin.client_subscribe']
+	].
 
 load() ->
     lists:foreach(fun ({Hook, Fun, Filter}) ->
@@ -31,19 +34,6 @@ unload() ->
 		  end,
 		  parse_rule(application:get_env(?APP, hooks, []))).
 
-
-%%--------------------------------------------------------------------
-%% Message publish
-% -record(message, {
-%           id :: binary(),
-%           qos = 0,
-%           from :: atom() | binary(),
-%           flags :: #{atom() => boolean()},
-%           headers :: map(),
-%           topic :: binary(),
-%           payload :: binary(),
-%           timestamp :: integer()
-%          }).
 %%--------------------------------------------------------------------
 
 on_message_publish(Message = #message{topic =  <<"$SYS/", _/binary>>}, _Env) ->
@@ -72,11 +62,32 @@ on_message_publish(Message = #message{headers= Headers, topic =  <<"$p2p/", Path
 on_message_publish(Message = #message{topic = Topic}, {Filter}) ->
 		with_filter(
 		  fun() ->
-			emqx_metrics:inc('advisory_plugin.message_publish'),
+			emqx_metrics:inc('ezlinker_p2p_plugin.message_publish'),
 			%% Begin
 			%% End
 			{ok, Message}
 		  end, Message, Topic, Filter).
+%%--------------------------------------------------------------------
+%% Client subscribe
+%%--------------------------------------------------------------------
+on_client_subscribe(_C, _P, _RTF, {_F}) ->
+  lists:foreach(fun({Topic, _OP}) ->
+    with_filter(
+      fun() ->
+        emqx_metrics:inc('ezlinker_p2p_plugin.client_subscribe'),
+    %% Code Start
+		io:format("Client sub topic:~p~n",[Topic]),
+		case  string:prefix(Topic,"$p2p/") of
+			nomatch ->
+				io:format("Client nomatch p2p topic~n"),
+				ok;
+			_ ->
+				io:format("Client match p2p topic ,deny~n"),
+				{stop, deny}
+		end
+	%% end
+      end, Topic, _F)
+	end, _RTF).
 %%--------------------------------------------------------------------
 %% Internal functions
 %%--------------------------------------------------------------------
@@ -90,6 +101,13 @@ parse_rule([{Rule, Conf} | Rules], Acc) ->
     parse_rule(Rules,
 	       [{list_to_atom(Rule), Action, Filter} | Acc]).
 
+with_filter(Fun, _, undefined) ->
+Fun(), ok;
+with_filter(Fun, Topic, Filter) ->
+case emqx_topic:match(Topic, Filter) of
+	true -> Fun(), ok;
+	false -> ok
+end.
 
 with_filter(Fun, _, _, undefined) -> Fun();
 with_filter(Fun, Msg, Topic, Filter) ->
@@ -100,10 +118,12 @@ with_filter(Fun, Msg, Topic, Filter) ->
 	
 load_(Hook, Fun, Params) ->
 	case Hook of
-		'message.publish'     -> emqx:hook(Hook, fun ?MODULE:Fun/2, [Params])
+		'message.publish'     -> emqx:hook(Hook, fun ?MODULE:Fun/2, [Params]);
+		'client.subscribe' -> emqx:hook(Hook, fun ?MODULE:Fun/4, [Params])
 	end.
 
 unload_(Hook, Fun) ->
 	case Hook of
-		'message.publish'     -> emqx:unhook(Hook, fun ?MODULE:Fun/2)
+		'message.publish'     -> emqx:unhook(Hook, fun ?MODULE:Fun/2);
+		'client.subscribe' -> emqx:hook(Hook, fun ?MODULE:Fun/4)
 	end.
