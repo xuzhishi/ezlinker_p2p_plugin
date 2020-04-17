@@ -61,6 +61,7 @@ on_message_publish(Message = #message{headers= Headers, topic =  <<"$p2p/", Path
 				[{_,ChannelPid}] ->
 						P2PMessage = emqx_message:make( From, QOS, <<"$p2p/", PeerClientId/binary >> , Payload),
 			            ChannelPid ! {deliver, <<"$p2p/", PeerClientId/binary >>, P2PMessage},
+						io:format("P2PMessage is :~p ~n", [P2PMessage]),
 						{ok, Message};
 				[]-> 
 					io:format("PeerClientId mappinged channel pid :~p is not exist ~n",[PeerClientId]),
