@@ -52,9 +52,24 @@ on_message_publish(Message = #message{topic =  <<"$SYS/", _/binary>>}, _Env) ->
 %%  ChannelPid = ets:lookup(emqx_channel, PeerClientId),
 %%  Message = emqx_message:make(<<"$p2p/", FromClientId>>, QOS, PeerClientId , Payload).
 %%  ChannelPid ! {deliver, <<"$p2p/", FromClientId>>, Message}
-on_message_publish(Message = #message{topic =  <<"$p2p/", PeerClientId/binary>>,qos = QOS , payload = Payload }, _Env) ->
-	io:format("P2P Message:~p to ~p QOS is:~p ~n",[ Payload , PeerClientId , QOS ] ),
-	{ok, Message};
+on_message_publish(Message = #message{topic =  <<"$p2p/", Path/binary>>,qos = QOS , payload = Payload ,from = From}, _Env) ->
+    case Path of 
+		<<>> ->
+			io:format("P2P Message is empty,will be ignored ~n"),
+			ignore;
+		PeerClientId ->
+			io:format("P2P Message:~p to ~p QOS is:~p ~n",[ Payload , PeerClientId , QOS ] ),
+			case  ets:lookup(emqx_channel, PeerClientId) of
+
+				[{_,ChannelPid}] ->
+						Message = emqx_message:make(<<"$p2p/", From>>, QOS, PeerClientId , Payload),
+			            ChannelPid ! {deliver, <<"$p2p/", From>>, Message},
+						{ok, Message};
+				[]-> 
+					io:format("PeerClientId mappinged channel pid :~p is not exist ~n",[PeerClientId]),
+					ignore
+		    end
+	end;
 			
 on_message_publish(Message = #message{topic = Topic}, {Filter}) ->
 		with_filter(
