@@ -59,8 +59,8 @@ on_message_publish(Message = #message{headers= Headers, topic =  <<"$p2p/", Path
 			case  ets:lookup(emqx_channel, PeerClientId) of
 
 				[{_,ChannelPid}] ->
-						Message = emqx_message:make( <<"$p2p/", From/binary >>, QOS, <<"$p2p/", PeerClientId/binary >> , Payload),
-			            ChannelPid ! {deliver, <<"$p2p/", From/binary >>, Message},
+						Message = emqx_message:make( From, QOS, <<"$p2p/", PeerClientId/binary >> , Payload),
+			            ChannelPid ! {deliver, <<"$p2p/", PeerClientId/binary >>, Message},
 						{ok, Message};
 				[]-> 
 					io:format("PeerClientId mappinged channel pid :~p is not exist ~n",[PeerClientId]),
