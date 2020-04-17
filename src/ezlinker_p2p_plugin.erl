@@ -49,14 +49,11 @@ unload() ->
 on_message_publish(Message = #message{topic =  <<"$SYS/", _/binary>>}, _Env) ->
 	{ok, Message};
 %%
-%%  ChannelPid = ets:lookup(emqx_channel, PeerClientId),
-%%  Message = emqx_message:make(<<"$p2p/", FromClientId>>, QOS, PeerClientId , Payload).
-%%  ChannelPid ! {deliver, <<"$p2p/", FromClientId>>, Message}
-on_message_publish(Message = #message{topic =  <<"$p2p/", Path/binary>>,qos = QOS , payload = Payload ,from = From}, _Env) ->
+on_message_publish(Message = #message{headers= Headers, topic =  <<"$p2p/", Path/binary>>,qos = QOS , payload = Payload ,from = From}, _Env) ->
     case Path of 
 		<<>> ->
 			io:format("P2P Message is empty,will be ignored ~n"),
-			stop;
+			{stop, Message#message{headers = Headers#{allow_publish => false}} };
 		PeerClientId ->
 			io:format("P2P Message:~p to ~p QOS is:~p ~n",[ Payload , PeerClientId , QOS ] ),
 			case  ets:lookup(emqx_channel, PeerClientId) of
@@ -67,7 +64,7 @@ on_message_publish(Message = #message{topic =  <<"$p2p/", Path/binary>>,qos = QO
 						{ok, Message};
 				[]-> 
 					io:format("PeerClientId mappinged channel pid :~p is not exist ~n",[PeerClientId]),
-					stop
+			{stop, Message#message{headers = Headers#{allow_publish => false}} }
 		    end
 	end;
 			
@@ -92,12 +89,6 @@ parse_rule([{Rule, Conf} | Rules], Acc) ->
     parse_rule(Rules,
 	       [{list_to_atom(Rule), Action, Filter} | Acc]).
 
-with_filter(Fun, _, undefined) -> Fun(), ok;
-with_filter(Fun, Topic, Filter) ->
-    case emqx_topic:match(Topic, Filter) of
-      true -> Fun(), ok;
-      false -> ok
-    end.
 
 with_filter(Fun, _, _, undefined) -> Fun();
 with_filter(Fun, Msg, Topic, Filter) ->
