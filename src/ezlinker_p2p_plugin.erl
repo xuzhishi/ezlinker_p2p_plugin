@@ -56,18 +56,18 @@ on_message_publish(Message = #message{topic =  <<"$p2p/", Path/binary>>,qos = QO
     case Path of 
 		<<>> ->
 			io:format("P2P Message is empty,will be ignored ~n"),
-			ignore;
+			stop;
 		PeerClientId ->
 			io:format("P2P Message:~p to ~p QOS is:~p ~n",[ Payload , PeerClientId , QOS ] ),
 			case  ets:lookup(emqx_channel, PeerClientId) of
 
 				[{_,ChannelPid}] ->
-						Message = emqx_message:make(<<"$p2p/", From>>, QOS, PeerClientId , Payload),
-			            ChannelPid ! {deliver, <<"$p2p/", From>>, Message},
+						Message = emqx_message:make( <<"$p2p/", From/binary >>, QOS, <<"$p2p/", PeerClientId/binary >> , Payload),
+			            ChannelPid ! {deliver, <<"$p2p/", From/binary >>, Message},
 						{ok, Message};
 				[]-> 
 					io:format("PeerClientId mappinged channel pid :~p is not exist ~n",[PeerClientId]),
-					ignore
+					stop
 		    end
 	end;
 			
