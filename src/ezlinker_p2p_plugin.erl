@@ -85,12 +85,11 @@ on_message_publish(Message = #message{topic = Topic}, {Filter}) ->
 %%--------------------------------------------------------------------
 %% Client subscribe
 %%--------------------------------------------------------------------
-on_client_subscribe(#{clientid := _C, username := _U}, _P, _RTF, {_F}) ->
+on_client_subscribe(#{clientid := _C, username := _U}, _P, RawTopicFilters, {_F}) ->
+  %% [{Topic,_OP}] = RawTopicFilters
   lists:foreach(fun({Topic, _OP}) ->
-    with_filter(
-      fun() ->
-      emqx_metrics:inc('ezlinker_p2p_plugin.client_subscribe'),
-    %% Code Start
+        emqx_metrics:inc('ezlinker_p2p_plugin.client_subscribe'),
+        %% Code Start
 		io:format("Client sub topic:~p~n",[Topic]),
 		case  string_start_with(Topic,"$p2p/") of
 			false ->
@@ -100,9 +99,7 @@ on_client_subscribe(#{clientid := _C, username := _U}, _P, _RTF, {_F}) ->
 				io:format("Client match p2p topic ,deny~n"),
 				{stop, deny}
 		end
-	%% end
-      end, Topic, _F)
-	end, _RTF).
+	end, RawTopicFilters).
 %%--------------------------------------------------------------------
 %% Internal functions
 %%--------------------------------------------------------------------
