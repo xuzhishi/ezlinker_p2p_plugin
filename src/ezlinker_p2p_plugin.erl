@@ -85,36 +85,24 @@ on_message_publish(Message = #message{topic = Topic}, {Filter}) ->
 %%--------------------------------------------------------------------
 %% Client subscribe
 %%--------------------------------------------------------------------
-on_client_subscribe(#{clientid := _C, username := _U}, _Properties, RawTopicFilters, {Filter}) ->
-  lists:foreach(fun({Topic, _Options}) ->
+on_client_subscribe(#{clientid := _C, username := _U}, _P, _RTF, {_F}) ->
+  lists:foreach(fun({Topic, _OP}) ->
     with_filter(
       fun() ->
-        emqx_metrics:inc('ezlinker_p2p_plugin.client_subscribe'),
-        %% Code Start
-	    io:format("Client sub topic:~p~n",[Topic]),
-        %% End
-        ok
-      end, Topic, Filter)
-                end, RawTopicFilters).
-
-% on_client_subscribe(#{clientid := _ClientId, username := _Username}, _P, _RTF, {_F}) ->
-%   lists:foreach(fun({Topic, _OP}) ->
-%     with_filter(
-%       fun() ->
-%       emqx_metrics:inc('ezlinker_p2p_plugin.client_subscribe'),
-%     %% Code Start
-% 		io:format("Client sub topic:~p~n",[Topic]),
-% 		case  string_start_with(Topic,"$p2p/") of
-% 			false ->
-% 				io:format("Client nomatch p2p topic~n"),
-% 				ok;
-% 			true ->
-% 				io:format("Client match p2p topic ,deny~n"),
-% 				{stop, deny}
-% 		end
-% 	%% end
-%       end, Topic, _F)
-% 	end, _RTF).
+      emqx_metrics:inc('ezlinker_p2p_plugin.client_subscribe'),
+    %% Code Start
+		io:format("Client sub topic:~p~n",[Topic]),
+		case  string_start_with(Topic,"$p2p/") of
+			false ->
+				io:format("Client nomatch p2p topic~n"),
+				ok;
+			true ->
+				io:format("Client match p2p topic ,deny~n"),
+				{stop, deny}
+		end
+	%% end
+      end, Topic, _F)
+	end, _RTF).
 %%--------------------------------------------------------------------
 %% Internal functions
 %%--------------------------------------------------------------------
