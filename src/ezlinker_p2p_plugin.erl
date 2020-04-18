@@ -15,11 +15,10 @@
 			  Args)).
 
 register_metrics() ->
-    [emqx_metrics:new(MetricName)
-     || MetricName
-	    <- [
-		'ezlinker_p2p_plugin.message_publish',
-		'ezlinker_p2p_plugin.client_subscribe']
+    [emqx_metrics:new(MetricName) || MetricName <- [
+				'ezlinker_p2p_plugin.message_publish',
+				'ezlinker_p2p_plugin.client_subscribe'
+			]
 	].
 
 load() ->
@@ -28,11 +27,27 @@ load() ->
 		  end,
 		  parse_rule(application:get_env(?APP, hooks, []))).
 
+
 unload() ->
     lists:foreach(fun ({Hook, Fun, _Filter}) ->
 			  unload_(Hook, binary_to_atom(Fun, utf8))
 		  end,
 		  parse_rule(application:get_env(?APP, hooks, []))).
+load_(Hook, Fun, Params) ->
+	case Hook of
+		'message.publish'  -> 
+			emqx:hook(Hook, fun ?MODULE:Fun/2, [Params]);
+		'client.subscribe' -> 
+			emqx:hook(Hook, fun ?MODULE:Fun/4, [Params])
+	end.
+
+unload_(Hook, Fun) ->
+	case Hook of
+		'message.publish'  -> 
+			emqx:unhook(Hook, fun ?MODULE:Fun/2);
+		'client.subscribe' -> 
+			emqx:hook(Hook, fun ?MODULE:Fun/4)
+	end.
 
 %%--------------------------------------------------------------------
 
@@ -128,17 +143,6 @@ with_filter(Fun, Msg, Topic, Filter) ->
       false -> {ok, Msg}
 	end.
 	
-load_(Hook, Fun, Params) ->
-	case Hook of
-		'message.publish'     -> emqx:hook(Hook, fun ?MODULE:Fun/2, [Params]);
-		'client.subscribe' -> emqx:hook(Hook, fun ?MODULE:Fun/4, [Params])
-	end.
-
-unload_(Hook, Fun) ->
-	case Hook of
-		'message.publish'     -> emqx:unhook(Hook, fun ?MODULE:Fun/2);
-		'client.subscribe' -> emqx:hook(Hook, fun ?MODULE:Fun/4)
-	end.
 
 %% start with
 string_start_with(String,SubString)->

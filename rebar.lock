@@ -17,7 +17,7 @@
   1},
  {<<"emqx">>,
   {git,"https://github.com/emqx/emqx",
-       {ref,"cc76abdcb3a52d9fb43e932e2f7fe57999e1df67"}},
+       {ref,"9a7680a98e0b175d2adfb50fd891a5b9223cba14"}},
   0},
  {<<"esockd">>,
   {git,"https://github.com/emqx/esockd",
