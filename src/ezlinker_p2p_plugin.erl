@@ -70,7 +70,8 @@ on_message_publish(Message = #message{topic = Topic}, {Filter}) ->
 %%--------------------------------------------------------------------
 %% Client subscribe
 %%--------------------------------------------------------------------
-on_client_subscribe(_C, _P, _RTF, {_F}) ->
+
+on_client_subscribe(#{clientid := _ClientId, username := _Username}, _P, _RTF, {_F}) ->
   lists:foreach(fun({Topic, _OP}) ->
     with_filter(
       fun() ->
