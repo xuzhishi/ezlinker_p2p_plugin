@@ -86,6 +86,8 @@ on_message_publish(Message = #message{topic = Topic}, {Filter}) ->
 %% Client subscribe
 %%--------------------------------------------------------------------
 on_client_subscribe(#{clientid := _C, username := _U}, _P, _RTF, {_F}) ->
+  io:format("Client sub topic:~p~n",[_RTF]),
+
   lists:foreach(fun({Topic, _OP}) ->
     with_filter(
       fun() ->
