@@ -2,7 +2,7 @@
 
 -include("ezlinker_p2p_plugin.hrl").
 
--include_lib("../include/emqx.hrl").
+-include_lib("emqx.hrl").
 
 -export([load/0, register_metrics/0, unload/0]).
 
