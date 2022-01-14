@@ -54,7 +54,7 @@ unload_(Hook, Fun) ->
 on_message_publish(Message = #message{topic =  <<"$SYS/", _/binary>>}, _Env) ->
 	{ok, Message};
 %%
-on_message_publish(Message = #message{headers= Headers, topic =  <<"p2p/", Path/binary>>,qos = QOS , payload = Payload ,from = From}, _Env) ->
+on_message_publish(Message = #message{headers= Headers, topic =  <<"$p2p/", Path/binary>>,qos = QOS , payload = Payload ,from = From}, _Env) ->
     case Path of 
 		<<>> ->
 			io:format("P2P Message is empty,will be ignored ~n"),
@@ -64,8 +64,8 @@ on_message_publish(Message = #message{headers= Headers, topic =  <<"p2p/", Path/
 			case  ets:lookup(emqx_channel, PeerClientId) of
 
 				[{_,ChannelPid}] ->
-						P2PMessage = emqx_message:make( From, QOS, <<"p2p/", PeerClientId/binary >> , Payload),
-			            ChannelPid ! {deliver, <<"p2p/", PeerClientId/binary >>, P2PMessage},
+						P2PMessage = emqx_message:make( From, QOS, <<"$p2p/", PeerClientId/binary >> , Payload),
+			            ChannelPid ! {deliver, <<"$p2p/", PeerClientId/binary >>, P2PMessage},
 						io:format("P2PMessage is :~p ~n", [P2PMessage]),
 						{ok, Message};
 				[]-> 
@@ -91,7 +91,7 @@ on_client_subscribe(#{clientid := _C, username := _U}, _P, RawTopicFilters, {_F}
         emqx_metrics:inc('ezlinker_p2p_plugin.client_subscribe'),
         %% Code Start
 		io:format("Client sub topic:~p~n",[Topic]),
-		case  string_start_with(Topic,"p2p/") of
+		case  string_start_with(Topic,"$p2p/") of
 			false ->
 				io:format("Client nomatch p2p topic~n"),
 				ok;
